@@ -1,0 +1,12 @@
+﻿Django>=4.2,<5.0
+djangorestframework>=3.14
+djangorestframework-simplejwt>=5.3
+django-cors-headers>=4.3
+python-dotenv>=1.0
+django-filter>=23.4
+celery>=5.3
+redis>=5.0
+psycopg2-binary>=2.9
+python-dateutil>=2.8
+requests>=2.31
+python-decouple>=3.8
