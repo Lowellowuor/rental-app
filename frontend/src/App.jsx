@@ -1,6 +1,7 @@
 ﻿import { Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import Login from './pages/Login'
+import Register from './pages/Register'
 import Layout from './components/Layout'
 import Dashboard from './pages/Dashboard'
 import EstateList from './pages/EstateList'
@@ -26,6 +27,7 @@ function App() {
     <AuthProvider>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
         <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
           <Route index element={<Dashboard />} />
           <Route path="estates" element={<EstateList />} />

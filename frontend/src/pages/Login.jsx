@@ -1,6 +1,6 @@
 ﻿import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { KeyIcon, UserIcon } from '@heroicons/react/24/outline'
 
 export default function Login() {
@@ -67,6 +67,12 @@ export default function Login() {
         </form>
         <p className="mt-6 text-center text-sm text-gray-600">
           Demo: admin / Admin@123
+        </p>
+        <p className="mt-4 text-center text-sm">
+          Don't have an account?{' '}
+          <Link to="/register" className="text-blue-600 hover:underline font-medium">
+            Sign Up
+          </Link>
         </p>
       </div>
     </div>

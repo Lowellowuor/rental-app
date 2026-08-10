@@ -1,9 +1,10 @@
 ﻿import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import api from '../api/axios'
 import GlassCard from '../components/GlassCard'
 import AddTenantModal from './AddTenantModal'
 import AssignHouseModal from './AssignHouseModal'
-import { UsersIcon, UserPlusIcon, EnvelopeIcon, HomeIcon } from '@heroicons/react/24/outline'
+import { UsersIcon, UserPlusIcon, HomeIcon, EyeIcon } from '@heroicons/react/24/outline'
 
 export default function TenantList() {
   const [tenants, setTenants] = useState([])
@@ -14,7 +15,7 @@ export default function TenantList() {
 
   const fetchTenants = async () => {
     try {
-      const res = await api.get('/users/?role=SUB_TENANT')
+      const res = await api.get('/users/list/?role=SUB_TENANT')
       setTenants(res.data)
       setLoading(false)
     } catch (err) {
@@ -58,20 +59,21 @@ export default function TenantList() {
         tenants.map(tenant => (
           <GlassCard key={tenant.id}>
             <div className="flex justify-between items-center">
-              <div>
-                <p className="font-medium">{tenant.username}</p>
-                <p className="text-sm text-gray-600">{tenant.phone_number}</p>
-              </div>
+              <Link to={'/tenants/' + tenant.id} className="flex-1">
+                <div>
+                  <p className="font-medium">{tenant.username}</p>
+                  <p className="text-sm text-gray-600">{tenant.phone_number}</p>
+                </div>
+              </Link>
               <div className="flex gap-2">
+                <Link to={'/tenants/' + tenant.id} className="p-2 bg-green-500/20 rounded-lg hover:bg-green-500/30 transition-all">
+                  <EyeIcon className="w-5 h-5 text-green-600" />
+                </Link>
                 <button 
                   onClick={() => openAssignModal(tenant)}
-                  className="p-2 bg-green-500/20 rounded-lg hover:bg-green-500/30 transition-all"
-                  title="Assign house"
+                  className="p-2 bg-blue-500/20 rounded-lg hover:bg-blue-500/30 transition-all"
                 >
-                  <HomeIcon className="w-5 h-5 text-green-600" />
-                </button>
-                <button className="p-2 bg-blue-500/20 rounded-lg">
-                  <EnvelopeIcon className="w-5 h-5 text-blue-600" />
+                  <HomeIcon className="w-5 h-5 text-blue-600" />
                 </button>
               </div>
             </div>
@@ -82,7 +84,9 @@ export default function TenantList() {
       <AddTenantModal
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
-        onSuccess={fetchTenants}
+        onSuccess={() => {
+          fetchTenants()
+        }}
       />
 
       <AssignHouseModal
@@ -93,7 +97,6 @@ export default function TenantList() {
         }}
         onSuccess={() => {
           fetchTenants()
-          // Optionally refresh other data
         }}
         tenant={selectedTenant}
       />

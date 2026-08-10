@@ -12,7 +12,9 @@ import {
   ChevronUpIcon,
   EyeIcon,
   UserIcon,
-  HomeIcon
+  HomeIcon,
+  BuildingOfficeIcon,
+  DocumentTextIcon
 } from '@heroicons/react/24/outline'
 
 export default function Payment() {
@@ -35,8 +37,8 @@ export default function Payment() {
   const fetchInvoices = async () => {
     try {
       const res = await api.get('/leasing/invoices/')
-      // For non-pay roles, show all invoices (including paid ones) for viewing.
-      // For pay roles, only show pending invoices.
+      // For non-pay roles, show all invoices (including paid ones)
+      // For pay roles, only show pending invoices
       let data = res.data
       if (canPay) {
         data = data.filter(inv => inv.status !== 'paid')
@@ -57,7 +59,7 @@ export default function Payment() {
   }
 
   const toggleInvoice = (inv) => {
-    if (!canPay) return // non-pay roles cannot expand
+    // Allow anyone to expand the invoice
     if (selectedInvoice?.id === inv.id) {
       setSelectedInvoice(null)
       setPaymentStatus(null)
@@ -195,6 +197,7 @@ export default function Payment() {
               const lease = inv.lease || {}
               const room = lease.room || {}
               const house = room.house || {}
+              const estate = house.estate || {}
               return (
                 <div
                   key={inv.id}
@@ -202,15 +205,15 @@ export default function Payment() {
                     isExpanded ? 'bg-blue-50/30 border-2 border-blue-300' : 'bg-white/30 hover:bg-white/50'
                   )}
                 >
-                  {/* Clickable header - only if canPay */}
+                  {/* Clickable header - always clickable to expand */}
                   <div
-                    onClick={() => canPay && toggleInvoice(inv)}
-                    className={"p-3 flex justify-between items-center " + (canPay ? 'cursor-pointer' : '')}
+                    onClick={() => toggleInvoice(inv)}
+                    className="p-3 flex justify-between items-center cursor-pointer"
                   >
                     <div>
                       <p className="font-medium">KES {inv.total_amount}</p>
                       <p className="text-sm text-gray-600">Due: {inv.due_date}</p>
-                      {!canPay && (
+                      {!canPay && !isExpanded && (
                         <div className="text-xs text-gray-500 mt-1 flex flex-wrap gap-2">
                           <span className="flex items-center gap-1"><HomeIcon className="w-3 h-3" /> {house.house_number || 'N/A'}</span>
                           <span className="flex items-center gap-1"><UserIcon className="w-3 h-3" /> {lease.sub_tenant?.username || 'N/A'}</span>
@@ -219,69 +222,99 @@ export default function Payment() {
                     </div>
                     <div className="flex items-center gap-2">
                       <span className={"px-2 py-1 rounded-full text-xs font-medium " + (
-                        inv.status === 'overdue' ? 'bg-red-200 text-red-800' : 'bg-yellow-200 text-yellow-800'
+                        inv.status === 'overdue' ? 'bg-red-200 text-red-800' : 
+                        inv.status === 'paid' ? 'bg-green-200 text-green-800' :
+                        'bg-yellow-200 text-yellow-800'
                       )}>
                         {inv.status}
                       </span>
-                      {canPay && (
-                        isExpanded ? (
-                          <ChevronUpIcon className="w-5 h-5 text-blue-600" />
-                        ) : (
-                          <ChevronDownIcon className="w-5 h-5 text-gray-500" />
-                        )
-                      )}
-                      {!canPay && (
-                        <EyeIcon className="w-5 h-5 text-gray-400" />
+                      {isExpanded ? (
+                        <ChevronUpIcon className="w-5 h-5 text-blue-600" />
+                      ) : (
+                        <ChevronDownIcon className="w-5 h-5 text-gray-500" />
                       )}
                     </div>
                   </div>
 
-                  {/* Expanded payment form - only if canPay and expanded */}
-                  {canPay && isExpanded && (
+                  {/* Expanded content - always shown when expanded */}
+                  {isExpanded && (
                     <div className="px-3 pb-3 pt-1 border-t border-white/20 space-y-3">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-600">Phone Number</label>
-                        <input
-                          type="tel"
-                          value={phoneNumber}
-                          onChange={(e) => setPhoneNumber(e.target.value)}
-                          placeholder="0712345678"
-                          className="mt-1 block w-full px-4 py-2 bg-white/50 backdrop-blur-sm border border-white/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400"
-                          disabled={isProcessing}
-                        />
-                        <p className="text-xs text-gray-500 mt-1">Enter your M-PESA registered number</p>
+                      {/* Read-only details (shown for everyone) */}
+                      <div className="space-y-1 text-sm text-gray-700">
+                        <div className="flex items-center gap-2">
+                          <BuildingOfficeIcon className="w-4 h-4 text-gray-500" />
+                          <span className="font-medium">Estate:</span> {estate.name || 'N/A'}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <HomeIcon className="w-4 h-4 text-gray-500" />
+                          <span className="font-medium">House:</span> {house.house_number || 'N/A'}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <DocumentTextIcon className="w-4 h-4 text-gray-500" />
+                          <span className="font-medium">Room:</span> {room.room_name || 'N/A'}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <UserIcon className="w-4 h-4 text-gray-500" />
+                          <span className="font-medium">Tenant:</span> {lease.sub_tenant?.username || 'N/A'}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <ClockIcon className="w-4 h-4 text-gray-500" />
+                          <span className="font-medium">Period:</span> {inv.period_start} – {inv.period_end}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <ExclamationTriangleIcon className="w-4 h-4 text-gray-500" />
+                          <span className="font-medium">Balance:</span> KES {inv.balance_due}
+                        </div>
                       </div>
 
-                      {paymentStatus && (
-                        <div className={"p-3 rounded-lg " + getPaymentStatusClass(paymentStatus.type)}>
-                          <div className="flex items-start gap-3">
-                            {getStatusIcon(paymentStatus.type)}
-                            <p className="text-sm">{paymentStatus.message}</p>
+                      {/* Payment form - only for paying users */}
+                      {canPay && (
+                        <div className="space-y-3">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-600">Phone Number</label>
+                            <input
+                              type="tel"
+                              value={phoneNumber}
+                              onChange={(e) => setPhoneNumber(e.target.value)}
+                              placeholder="0712345678"
+                              className="mt-1 block w-full px-4 py-2 bg-white/50 backdrop-blur-sm border border-white/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400"
+                              disabled={isProcessing}
+                            />
+                            <p className="text-xs text-gray-500 mt-1">Enter your M-PESA registered number</p>
                           </div>
+
+                          {paymentStatus && (
+                            <div className={"p-3 rounded-lg " + getPaymentStatusClass(paymentStatus.type)}>
+                              <div className="flex items-start gap-3">
+                                {getStatusIcon(paymentStatus.type)}
+                                <p className="text-sm">{paymentStatus.message}</p>
+                              </div>
+                            </div>
+                          )}
+
+                          <button
+                            onClick={handlePayment}
+                            disabled={isProcessing || !selectedInvoice}
+                            className={"w-full py-3 px-4 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 " + (
+                              isProcessing || !selectedInvoice
+                                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                : 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-lg hover:shadow-xl'
+                            )}
+                          >
+                            {isProcessing ? (
+                              <>
+                                <ClockIcon className="w-5 h-5 animate-spin" />
+                                Processing...
+                              </>
+                            ) : (
+                              <>
+                                <CreditCardIcon className="w-5 h-5" />
+                                Pay with M-PESA
+                              </>
+                            )}
+                          </button>
                         </div>
                       )}
-
-                      <button
-                        onClick={handlePayment}
-                        disabled={isProcessing || !selectedInvoice}
-                        className={"w-full py-3 px-4 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 " + (
-                          isProcessing || !selectedInvoice
-                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                            : 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-lg hover:shadow-xl'
-                        )}
-                      >
-                        {isProcessing ? (
-                          <>
-                            <ClockIcon className="w-5 h-5 animate-spin" />
-                            Processing...
-                          </>
-                        ) : (
-                          <>
-                            <CreditCardIcon className="w-5 h-5" />
-                            Pay with M-PESA
-                          </>
-                        )}
-                      </button>
                     </div>
                   )}
                 </div>

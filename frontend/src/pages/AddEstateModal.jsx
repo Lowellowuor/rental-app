@@ -6,6 +6,7 @@ export default function AddEstateModal({ isOpen, onClose, onSuccess }) {
   const [name, setName] = useState('')
   const [location, setLocation] = useState('')
   const [totalUnits, setTotalUnits] = useState('')
+  const [numHouses, setNumHouses] = useState('')
   const [manager, setManager] = useState('')
   const [managers, setManagers] = useState([])
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -14,7 +15,6 @@ export default function AddEstateModal({ isOpen, onClose, onSuccess }) {
 
   useEffect(() => {
     if (isOpen) {
-      // Fetch users with role ESTATE_MANAGER or SUPER_ADMIN for manager dropdown
       api.get('/users/list/?role=ESTATE_MANAGER')
         .then(res => setManagers(res.data))
         .catch(err => console.error(err))
@@ -34,17 +34,36 @@ export default function AddEstateModal({ isOpen, onClose, onSuccess }) {
     setIsSubmitting(true)
 
     try {
-      const payload = {
+      const estatePayload = {
         name: name,
         location: location,
         total_units: parseInt(totalUnits),
         manager: manager || null
       }
-      await api.post('/properties/estates/', payload)
+      const estateRes = await api.post('/properties/estates/', estatePayload)
+      const estateId = estateRes.data.id
+
+      const houseCount = parseInt(numHouses) || 0
+      if (houseCount > 0) {
+        const housePromises = []
+        for (let i = 1; i <= houseCount; i++) {
+          const houseNumber = 'Unit ' + i
+          housePromises.push(
+            api.post('/properties/houses/', {
+              estate: estateId,
+              house_number: houseNumber,
+              main_tenant: null
+            })
+          )
+        }
+        await Promise.all(housePromises)
+      }
+
       setSuccess(true)
       setName('')
       setLocation('')
       setTotalUnits('')
+      setNumHouses('')
       setManager('')
       onSuccess()
       setTimeout(() => {
@@ -78,6 +97,7 @@ export default function AddEstateModal({ isOpen, onClose, onSuccess }) {
         {success && (
           <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-800 text-sm">
             Estate added successfully!
+            {parseInt(numHouses) > 0 && ' Created ' + numHouses + ' houses.'}
           </div>
         )}
 
@@ -112,7 +132,7 @@ export default function AddEstateModal({ isOpen, onClose, onSuccess }) {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Total Units *
+              Total Units (Rooms) *
             </label>
             <input
               type="number"
@@ -122,6 +142,21 @@ export default function AddEstateModal({ isOpen, onClose, onSuccess }) {
               className="w-full px-4 py-2 bg-white/50 backdrop-blur-sm border border-white/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400"
               required
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Number of Houses to Create (Optional)
+            </label>
+            <input
+              type="number"
+              value={numHouses}
+              onChange={(e) => setNumHouses(e.target.value)}
+              placeholder="e.g., 10"
+              className="w-full px-4 py-2 bg-white/50 backdrop-blur-sm border border-white/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400"
+              min="0"
+            />
+            <p className="text-xs text-gray-500 mt-1">Will create houses named "Unit 1", "Unit 2", etc.</p>
           </div>
 
           <div>

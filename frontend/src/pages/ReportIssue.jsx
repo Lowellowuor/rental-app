@@ -29,7 +29,20 @@ export default function ReportIssue({ isOpen, onClose, onSuccess }) {
       onSuccess()
       onClose()
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to report issue. Please try again.')
+      // Extract and show the error message from the server
+      let msg = 'Failed to report issue. Please try again.'
+      if (err.response && err.response.data) {
+        if (typeof err.response.data === 'object') {
+          // If it's a validation error like { "field": ["error message"] }
+          const errors = Object.values(err.response.data).flat().join(' ')
+          msg = errors || msg
+        } else {
+          msg = err.response.data || msg
+        }
+      } else if (err.message) {
+        msg = err.message
+      }
+      setError(msg)
     } finally {
       setIsSubmitting(false)
     }
@@ -46,7 +59,7 @@ export default function ReportIssue({ isOpen, onClose, onSuccess }) {
         >
           <XMarkIcon className="w-6 h-6 text-gray-600" />
         </button>
-        
+
         <div className="flex items-center gap-2 mb-4">
           <ExclamationTriangleIcon className="w-6 h-6 text-red-600" />
           <h2 className="text-xl font-bold text-gray-800">Report Issue</h2>
@@ -83,7 +96,9 @@ export default function ReportIssue({ isOpen, onClose, onSuccess }) {
           </div>
 
           {error && (
-            <p className="text-red-500 text-sm">{error}</p>
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm">
+              {error}
+            </div>
           )}
 
           <button

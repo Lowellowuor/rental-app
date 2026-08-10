@@ -15,7 +15,7 @@ class MaintenanceTicketViewSet(viewsets.ModelViewSet):
     queryset = MaintenanceTicket.objects.all().select_related('tenant', 'house')
     serializer_class = MaintenanceTicketSerializer
     permission_classes = [IsMaintenanceAllowed]
-    
+
     def get_queryset(self):
         user = self.request.user
         if user.role == 'SUB_TENANT':
@@ -23,35 +23,42 @@ class MaintenanceTicketViewSet(viewsets.ModelViewSet):
         elif user.role == 'MAIN_TENANT':
             return self.queryset.filter(house__main_tenant=user)
         return self.queryset
-    
+
     def perform_create(self, serializer):
         user = self.request.user
         data = serializer.validated_data
+        # If house not provided and user is a sub-tenant, try to infer from their active lease
         if not data.get('house') and user.role == 'SUB_TENANT':
             from leasing.models import LeaseAgreement
             active_lease = LeaseAgreement.objects.filter(sub_tenant=user, status='active').first()
             if active_lease:
                 data['house'] = active_lease.room.house
         serializer.save(tenant=user)
-    
+
     @action(detail=True, methods=['patch'])
     def update_status(self, request, pk=None):
         ticket = self.get_object()
-        status = request.data.get('status')
-        if not status:
-            return Response({'error': 'Status is required'}, status=status.HTTP_400_BAD_REQUEST)
-        ticket.status = status
-        if status == 'resolved':
+        status_val = request.data.get('status')
+        if not status_val:
+            return Response(
+                {'error': 'Status is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        ticket.status = status_val
+        if status_val == 'resolved':
             ticket.resolved_at = timezone.now()
         ticket.save()
         return Response(MaintenanceTicketSerializer(ticket).data)
-    
+
     @action(detail=True, methods=['post'])
     def add_note(self, request, pk=None):
         ticket = self.get_object()
         note = request.data.get('note')
         if not note:
-            return Response({'error': 'Note is required'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'error': 'Note is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         if ticket.notes:
             ticket.notes += f'\n{timezone.now()}: {note}'
         else:

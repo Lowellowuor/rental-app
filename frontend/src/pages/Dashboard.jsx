@@ -14,7 +14,8 @@ import {
   UsersIcon,
   ArrowRightIcon,
   CheckCircleIcon,
-  ClockIcon
+  ClockIcon,
+  UserIcon
 } from '@heroicons/react/24/outline'
 
 export default function Dashboard() {
@@ -28,23 +29,26 @@ export default function Dashboard() {
     recentInvoices: [],
     recentMaintenance: [],
   })
+  const [houseDetails, setHouseDetails] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       setLoading(true)
       try {
-        const [estatesRes, housesRes, invoicesRes, maintenanceRes] = await Promise.all([
+        const [estatesRes, housesRes, invoicesRes, maintenanceRes, leasesRes] = await Promise.all([
           api.get('/properties/estates/'),
           api.get('/properties/houses/'),
           api.get('/leasing/invoices/'),
-          api.get('/maintenance/tickets/')
+          api.get('/maintenance/tickets/'),
+          api.get('/leasing/leases/?status=active')
         ])
 
         const estates = estatesRes.data
         const houses = housesRes.data
         const invoices = invoicesRes.data
         const maintenance = maintenanceRes.data
+        const leases = leasesRes.data
 
         const overdueInvoices = invoices.filter(inv => inv.status === 'overdue')
         const pendingMaintenance = maintenance.filter(t => t.status !== 'resolved' && t.status !== 'cancelled')
@@ -61,6 +65,50 @@ export default function Dashboard() {
           recentInvoices,
           recentMaintenance,
         })
+
+        // Role‑specific house details
+        if (user?.role === 'SUB_TENANT') {
+          // Find the sub‑tenant's active lease
+          const myLease = leases.find(lease => lease.sub_tenant === user.id)
+          if (myLease) {
+            // Fetch full lease details with room/house/estate
+            const leaseDetailRes = await api.get('/leasing/leases/' + myLease.id + '/')
+            setHouseDetails({
+              type: 'subtenant',
+              lease: leaseDetailRes.data,
+              room: leaseDetailRes.data.room_details,
+              house: leaseDetailRes.data.room_details?.house,
+              estate: leaseDetailRes.data.room_details?.house?.estate,
+            })
+          }
+        } else if (user?.role === 'MAIN_TENANT') {
+          // Get houses where this user is the main tenant
+          const myHousesRes = await api.get('/properties/houses/?main_tenant=' + user.id)
+          const myHouses = myHousesRes.data
+          // For each house, get rooms and sub‑tenants (via leases)
+          const housesWithDetails = await Promise.all(myHouses.map(async (house) => {
+            const roomsRes = await api.get('/properties/rooms/?house=' + house.id)
+            const rooms = roomsRes.data
+            const occupiedRooms = rooms.filter(r => r.is_occupied)
+            // Get sub‑tenants from leases for this house
+            const leasesForHouse = leases.filter(lease => lease.room?.house === house.id)
+            const subTenantIds = [...new Set(leasesForHouse.map(l => l.sub_tenant))]
+            const subTenants = await Promise.all(subTenantIds.map(id => 
+              api.get('/users/' + id + '/').then(res => res.data)
+            ))
+            return {
+              ...house,
+              rooms,
+              occupiedRooms: occupiedRooms.length,
+              subTenants
+            }
+          }))
+          setHouseDetails({
+            type: 'maintenant',
+            houses: housesWithDetails,
+          })
+        }
+
       } catch (err) {
         console.error('Failed to fetch dashboard data:', err)
       } finally {
@@ -69,7 +117,7 @@ export default function Dashboard() {
     }
 
     fetchDashboardData()
-  }, [])
+  }, [user])
 
   const getStatusClass = (status) => {
     if (status === 'paid') return 'bg-green-200 text-green-800'
@@ -127,6 +175,58 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Role-specific House Details */}
+      {houseDetails && (
+        <>
+          {houseDetails.type === 'subtenant' && (
+            <GlassCard>
+              <h2 className="font-semibold text-gray-700 flex items-center gap-2">
+                <HomeIcon className="w-5 h-5 text-blue-600" />
+                Your Room
+              </h2>
+              <div className="mt-2 space-y-1 text-sm text-gray-600">
+                <p><span className="font-medium">Estate:</span> {houseDetails.estate?.name || 'N/A'}</p>
+                <p><span className="font-medium">House:</span> {houseDetails.house?.house_number || 'N/A'}</p>
+                <p><span className="font-medium">Room:</span> {houseDetails.room?.room_name || 'N/A'}</p>
+                <p><span className="font-medium">Rent:</span> KES {houseDetails.lease?.monthly_rent}</p>
+                <p><span className="font-medium">Lease Status:</span> {houseDetails.lease?.status}</p>
+              </div>
+            </GlassCard>
+          )}
+
+          {houseDetails.type === 'maintenant' && (
+            <div>
+              <h2 className="font-semibold text-gray-700 flex items-center gap-2 mb-2">
+                <HomeIcon className="w-5 h-5 text-blue-600" />
+                Your Houses ({houseDetails.houses?.length || 0})
+              </h2>
+              {houseDetails.houses?.length === 0 ? (
+                <GlassCard><p className="text-gray-500">You have no houses assigned.</p></GlassCard>
+              ) : (
+                houseDetails.houses.map(house => (
+                  <Link key={house.id} to={'/houses/' + house.id}>
+                    <GlassCard>
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <p className="font-medium">{house.house_number}</p>
+                          <p className="text-sm text-gray-600">
+                            Rooms: {house.rooms?.length || 0} · Occupied: {house.occupiedRooms || 0}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            Sub‑tenants: {house.subTenants?.length || 0}
+                          </p>
+                        </div>
+                        <UserIcon className="w-5 h-5 text-gray-400" />
+                      </div>
+                    </GlassCard>
+                  </Link>
+                ))
+              )}
+            </div>
+          )}
+        </>
+      )}
 
       {/* Stats Summary - Clickable Cards */}
       <div className="grid grid-cols-2 gap-2">
