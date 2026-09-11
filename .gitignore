@@ -1,99 +1,46 @@
-﻿# Python
+﻿@'
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Python
 __pycache__/
 *.py[cod]
+*$py.class
 *.so
 .Python
-env/
 venv/
+.venv/
+env/
 ENV/
-env.bak/
-venv.bak/
-*.sqlite3
-*.db
-*.log
-.DS_Store
-*.pid
-*.pot
-*.pyc
-*.pyo
-*.mo
-*.po
-*.orig
-*.rej
-.svn/
-*.swp
-*.swo
-.coverage
-.coverage.*
-.coverage-report
-htmlcov/
-.tox/
-.pytest_cache/
-.mypy_cache/
-.dmypy.json
-dmypy.json
-.pyre/
 *.egg-info/
-dist/
-build/
-*.egg
-MANIFEST
+.pytest_cache/
+.coverage
+htmlcov/
 
 # Django
-media/
-staticfiles/
-*.log
-local_settings.py
 db.sqlite3
 db.sqlite3-journal
-*.bak
-*.tmp
+/media/
+/staticfiles/
+logs/
+*.log
 
-# Environment variables
-.env
-.env.local
-.env.*.local
+# Node / Vite
+node_modules/
+dist/
+dist-ssr/
+.vite/
+*.local
 
-# Celery
-celerybeat-schedule
-celerybeat.pid
-*.pid
-
-# Node / Frontend
-frontend/node_modules/
-frontend/.vite/
-frontend/dist/
-frontend/.env.local
-frontend/.env.*.local
-frontend/npm-debug.log*
-frontend/yarn-debug.log*
-frontend/yarn-error.log*
-frontend/package-lock.json
-frontend/yarn.lock
-
-# IDE / OS
+# Editors
 .vscode/
 .idea/
-*.iml
-*.sublime-project
-*.sublime-workspace
-.DS_Store
-Thumbs.db
-ehthumbs.db
-Desktop.ini
-
-# Backup files
-*.bak
-*.tmp
 *.swp
 *.swo
 
-# Coverage / reports
-htmlcov/
-.coverage
-coverage.xml
-*.cover
-
-# Logs
-logs/
-*.log
+# OS
+.DS_Store
+Thumbs.db
+'@ | Set-Content -Path .gitignore -Encoding UTF8
